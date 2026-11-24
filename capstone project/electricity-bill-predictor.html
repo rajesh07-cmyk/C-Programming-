@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Electricity Consumption Analysis and Bill Prediction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;800&family=Chivo+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF2F5;--sf:#fff;--ink:#0E2236;--mu:#56677A;--ln:#D3DCE4;--lamp:#FFC83D;--mb:#0E2236;--bar:#2F6F9F;--ok:#1C7C54;--bad:#B4421F;--hi:#FFF1C7;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0A141F;--sf:#12212F;--ink:#E6EDF3;--mu:#93A4B4;--ln:#24384A;--mb:#050B12;--bar:#5AA7DC;--ok:#4CC38A;--bad:#FF8A63;--hi:#3A3112;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0A141F;--sf:#12212F;--ink:#E6EDF3;--mu:#93A4B4;--ln:#24384A;--mb:#050B12;--bar:#5AA7DC;--ok:#4CC38A;--bad:#FF8A63;--hi:#3A3112;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 Chivo,system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:clamp(1.5rem,5vw,2.2rem);line-height:1.1;margin:0 0 4px;font-weight:800;letter-spacing:-.01em}
+.sub{color:var(--mu);margin:0 0 18px;max-width:60ch}
+h2{font-size:1.25rem;margin:0 0 4px;font-weight:800}
+.mono,.dig,output{font-family:"Chivo Mono",ui-monospace,Menlo,Consolas,monospace}
+.meter{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;background:var(--mb);border-radius:14px;padding:14px;color:#fff;border:3px solid var(--lamp)}
+.meter small{display:block;color:#B9C6D3;font-size:.8rem;margin-bottom:4px}
+.dig{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+.dig i{font-style:normal;background:#000;color:var(--lamp);border:1px solid #3a4a5a;border-radius:4px;padding:2px 7px;font-size:1.45rem;font-weight:700;line-height:1.3}
+.dig i.u{background:none;border:0;color:#B9C6D3;font-size:.95rem;padding:0 0 0 4px}
+nav{display:flex;gap:4px;margin:18px 0 14px;border-bottom:2px solid var(--ln);overflow-x:auto}
+nav button{flex:1 0 auto;background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;padding:10px 14px;font:600 1rem Chivo,sans-serif;color:var(--mu);cursor:pointer}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--lamp)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--bar);outline-offset:2px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:16px;margin-bottom:14px}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 0;border-top:1px solid var(--ln)}
+.row:first-child{border-top:0}
+.row .n{grid-column:1/-1}
+label{font-size:.82rem;color:var(--mu);display:block}
+input,select{width:100%;margin-top:3px;padding:9px 10px;font:500 1rem "Chivo Mono",monospace;background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:6px}
+input.bad{border-color:var(--bad);background:var(--hi)}
+.k{display:block;align-self:end;font-weight:700}
+.x{justify-self:end;align-self:end;background:none;border:1px solid var(--ln);color:var(--bad);border-radius:6px;padding:8px 12px;font:600 .9rem Chivo,sans-serif;cursor:pointer}
+.btn{background:var(--lamp);color:#0E2236;border:0;border-radius:8px;padding:10px 16px;font:700 1rem Chivo,sans-serif;cursor:pointer}
+.btn.g{background:none;color:var(--ink);border:1px solid var(--ln)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chips button{background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:20px;padding:6px 12px;font:500 .9rem Chivo,sans-serif;cursor:pointer}
+.bar{display:grid;grid-template-columns:minmax(90px,1.2fr) 3fr 70px;gap:10px;align-items:center;padding:7px 0}
+.bar.top{background:var(--hi);margin:0 -8px;padding:7px 8px;border-radius:6px}
+.track{background:var(--bg);height:16px;border-radius:4px;overflow:hidden}
+.track b{display:block;height:100%;background:var(--bar)}
+.bar.top .track b{background:var(--lamp)}
+.bar span:last-child{text-align:right;font-family:"Chivo Mono",monospace;font-size:.9rem}
+.cols{display:flex;gap:8px;align-items:flex-end;height:170px;padding-top:8px}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.col b{width:100%;background:var(--bar);border-radius:4px 4px 0 0;min-height:2px}
+.col.f b{background:var(--lamp);outline:2px dashed var(--ink);outline-offset:-2px}
+.col em{font:normal .72rem "Chivo Mono",monospace;color:var(--mu)}
+.col span{font-size:.78rem;color:var(--mu)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+td,th{padding:6px 4px;border-top:1px solid var(--ln);text-align:right}
+th{color:var(--mu);font-weight:600;font-size:.82rem}
+td:first-child,th:first-child{text-align:left}
+tfoot td{font-weight:800;border-top:2px solid var(--ink)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.note{color:var(--mu);font-size:.85rem}
+.err{color:var(--bad);font-weight:600;margin:6px 0 0}
+.up{color:var(--bad)}.dn{color:var(--ok)}
+.hist{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:6px 0;align-items:end}
+ul.tips{padding-left:20px;margin:6px 0}
+ul.tips li{margin:5px 0;max-width:68ch}
+[hidden]{display:none!important}
+@media (max-width:520px){.row{grid-template-columns:1fr 1fr 1fr}.bar{grid-template-columns:90px 1fr 62px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Electricity Consumption Analysis and Bill Prediction</h1>
+<p class="sub">Enter your appliances, see where the units go, and estimate the next bill from past months.</p>
+
+<div class="meter" aria-live="polite">
+<div><small>Units this month (kWh)</small><div class="dig" id="m1"></div></div>
+<div><small>Bill for this month</small><div class="dig" id="m2"></div></div>
+<div><small>Forecast bill for next month</small><div class="dig" id="m3"></div></div>
+</div>
+
+<nav role="tablist" aria-label="Sections">
+<button role="tab" aria-selected="true" data-t="t1">Appliances</button>
+<button role="tab" aria-selected="false" data-t="t2">Usage</button>
+<button role="tab" aria-selected="false" data-t="t3">Forecast</button>
+<button role="tab" aria-selected="false" data-t="t4">Report</button>
+</nav>
+
+<section id="t1">
+<div class="card">
+<h2>Your appliances</h2>
+<p class="note">Hours per day is the time the appliance actually runs (a refrigerator compressor runs about 8 hours of a day).</p>
+<div id="apps"></div>
+<p class="err" id="e1" hidden>Fix the highlighted fields: watts above 0, quantity at least 1, hours between 0 and 24. Those rows count as 0 until fixed.</p>
+<div class="chips" id="presets" aria-label="Add a common appliance"></div>
+<div class="two" style="margin-top:10px">
+<label>Days in billing period<input id="days" type="number" min="1" max="31" inputmode="numeric"></label>
+<div style="align-self:end"><button class="btn g" id="addBlank">Add blank appliance</button></div>
+</div>
+<p class="err" id="e2" hidden>Days must be between 1 and 31.</p>
+</div>
+</section>
+
+<section id="t2" hidden>
+<div class="card">
+<h2>Where the units go</h2>
+<p class="note" id="topline"></p>
+<div id="bars"></div>
+</div>
+<div class="card">
+<h2>Compare with last month</h2>
+<p id="cmp" class="note"></p>
+<div class="two">
+<label>Month name<input id="mname" placeholder="Nov" maxlength="12"></label>
+<div style="align-self:end"><button class="btn" id="saveM">Save as month record</button></div>
+</div>
+</div>
+</section>
+
+<section id="t3" hidden>
+<div class="card">
+<h2>Past monthly units</h2>
+<p class="note">Edit these with units from your previous bills. The forecast uses the most recent months.</p>
+<div id="hist"></div>
+<button class="btn g" id="addH">Add a month</button>
+<p class="err" id="e3" hidden>Add at least two months of past units to get a forecast.</p>
+</div>
+<div class="card">
+<h2>Next month</h2>
+<label>Forecast method
+<select id="method"><option value="avg">Moving average (last 3 months)</option><option value="tr">Trend line (last 6 months)</option></select></label>
+<div class="cols" id="chart" role="img" aria-label="Bar chart of past monthly units and the forecast"></div>
+<p id="fline"></p>
+</div>
+<div class="card">
+<h2>Tariff slabs</h2>
+<p class="note">Sample values. Replace them with the rates on your own bill.</p>
+<div id="slabs"></div>
+<div class="two">
+<label>Fixed charge<input id="fixed" type="number" min="0" inputmode="decimal"></label>
+<label>Tax and other charges (%)<input id="tax" type="number" min="0" inputmode="decimal"></label>
+</div>
+<div style="margin-top:10px"><button class="btn g" id="addS">Add slab</button> <button class="btn g" id="rmS">Remove last slab</button></div>
+<h2 style="margin-top:18px">Bill estimate</h2>
+<div id="bill"></div>
+</div>
+</section>
+
+<section id="t4" hidden>
+<div class="card">
+<h2>Summary</h2>
+<div id="rep"></div>
+<h2 style="margin-top:16px">Energy-saving tips</h2>
+<ul class="tips" id="tips"></ul>
+<label style="max-width:260px;margin-top:10px">Grid emissions (kg CO₂ per kWh)<input id="co2" type="number" min="0" step="0.01" inputmode="decimal"></label>
+<p class="note">Emission factor is an editable assumption.</p>
+<div style="margin-top:10px"><button class="btn" id="copy">Copy report</button> <button class="btn g" id="reset">Reset to sample data</button> <span id="cmsg" class="note" role="status"></span></div>
+</div>
+</section>
+
+<p class="note">Estimates only. Actual utility bills may differ due to tariff rules and adjustments. Appliance energy = watts × quantity × hours per day × days ÷ 1,000.</p>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DEF={days:30,fixed:50,tax:5,method:'avg',co2:0.82,
+apps:[{name:'Ceiling fan',w:75,q:4,h:10},{name:'LED light',w:9,q:8,h:6},{name:'Television',w:100,q:1,h:5},{name:'Refrigerator',w:150,q:1,h:8},{name:'Air conditioner',w:1200,q:1,h:3},{name:'Washing machine',w:500,q:1,h:0.5}],
+hist:[{m:'May',u:268},{m:'Jun',u:291},{m:'Jul',u:305},{m:'Aug',u:287},{m:'Sep',u:322},{m:'Oct',u:338}],
+slabs:[{size:100,rate:3},{size:100,rate:5},{size:200,rate:7},{size:0,rate:9}]};
+const PRE=[['Fan',75],['LED bulb',9],['Television',100],['Refrigerator',150],['Air conditioner',1200],['Washing machine',500],['Water heater',2000],['Laptop',60],['Iron',1000],['Mixer grinder',500]];
+let S=load();
+function load(){try{const r=localStorage.getItem('ecb1');if(r)return Object.assign({},DEF,JSON.parse(r))}catch(e){}return JSON.parse(JSON.stringify(DEF))}
+function save(){try{localStorage.setItem('ecb1',JSON.stringify(S))}catch(e){}}
+const ok=a=>a.w>0&&a.q>=1&&a.h>=0&&a.h<=24;
+const kwh=a=>ok(a)?a.w*a.q*a.h*S.days/1000:0;
+const daysOk=()=>S.days>=1&&S.days<=31;
+const total=()=>daysOk()?S.apps.reduce((t,a)=>t+kwh(a),0):0;
+const f1=n=>(Math.round(n*10)/10).toFixed(1);
+const money=n=>'₹'+Math.round(n).toLocaleString('en-IN');
+function bill(u){let left=u,e=0;const rows=[];S.slabs.forEach((s,i)=>{const last=i===S.slabs.length-1;const q=last?left:Math.min(left,s.size);if(q>0){rows.push([q,s.rate,q*s.rate]);e+=q*s.rate}left-=q});
+const sub=e+(+S.fixed||0);const tax=sub*(+S.tax||0)/100;return{rows,e,fixed:+S.fixed||0,tax,total:sub+tax}}
+function forecast(){const h=S.hist.map(x=>+x.u).filter(x=>x>=0);if(h.length<2)return null;
+const a=h.slice(-3),avg=a.reduce((x,y)=>x+y,0)/a.length;
+const r=h.slice(-6),n=r.length,xm=(n-1)/2,ym=r.reduce((x,y)=>x+y,0)/n;let nu=0,de=0;r.forEach((y,i)=>{nu+=(i-xm)*(y-ym);de+=(i-xm)**2});
+const sl=de?nu/de:0;return{avg,tr:Math.max(0,ym+sl*(n-xm)),sl}}
+const fUnits=()=>{const f=forecast();return f?(S.method==='tr'?f.tr:f.avg):null};
+
+function digits(el,str,unit){el.innerHTML=[...str].map(c=>'<i>'+c+'</i>').join('')+(unit?'<i class="u">'+unit+'</i>':'')}
+function renderApps(){$('#apps').innerHTML=S.apps.map((a,i)=>`<div class="row" data-i="${i}"><label class="n">Appliance<input data-k="name" value="${esc(a.name)}"></label><label>Watts<input data-k="w" type="number" min="1" inputmode="decimal" value="${a.w}"></label><label>Quantity<input data-k="q" type="number" min="1" step="1" inputmode="numeric" value="${a.q}"></label><label>Hours per day<input data-k="h" type="number" min="0" max="24" step="0.5" inputmode="decimal" value="${a.h}"></label><output class="k" id="k${i}"></output><button class="x" data-del="${i}" aria-label="Remove ${esc(a.name)}">Remove</button></div>`).join('')||'<p class="note">No appliances yet. Pick one below.</p>'}
+function renderHist(){$('#hist').innerHTML=S.hist.map((h,i)=>`<div class="hist" data-i="${i}"><label>Month<input data-k="m" value="${esc(h.m)}" maxlength="12"></label><label>Units (kWh)<input data-k="u" type="number" min="0" inputmode="decimal" value="${h.u}"></label><button class="x" data-del="${i}" aria-label="Remove ${esc(h.m)}">Remove</button></div>`).join('')}
+function renderSlabs(){$('#slabs').innerHTML=S.slabs.map((s,i)=>{const last=i===S.slabs.length-1;return`<div class="hist" data-i="${i}"><label>${last?'All remaining units':'Slab size (units)'}${last?'<input disabled value="and above">':`<input data-k="size" type="number" min="1" inputmode="decimal" value="${s.size}">`}</label><label>Rate per unit<input data-k="rate" type="number" min="0" step="0.1" inputmode="decimal" value="${s.rate}"></label><span></span></div>`}).join('')}
+
+function tips(top){const t=[];const n=(top?top.name:'').toLowerCase();
+if(/\bac\b|air|cooler/.test(n))t.push('Your air conditioner leads the list. Set it to 24–26 °C and use the timer or sleep mode.');
+else if(/heater|geyser|iron/.test(n))t.push('Heating appliances draw a lot. Use a timer and switch off as soon as the water or iron is ready.');
+else if(/fan/.test(n))t.push('Fans lead the list. Switch them off in empty rooms and consider energy-efficient BLDC fans.');
+else if(/light|bulb|led|tube/.test(n))t.push('Lighting leads the list. Switch to LED bulbs and turn lights off when you leave a room.');
+else if(/fridge|refrig/.test(n))t.push('The refrigerator leads the list. Keep door seals tight and avoid putting hot food inside.');
+else if(top&&top.kwh>0)t.push('Your biggest user is '+top.name+'. Try shorter daily hours and compare next month.');
+t.push('Unplug chargers and switch off TVs and laptops at the socket instead of leaving them on standby.');
+t.push('Run the washing machine with full loads and clean AC filters regularly.');
+t.push('Compare each month’s units with the saved records to spot a rise early.');return t}
+
+function update(){
+const T=total(),B=bill(T),fu=fUnits(),FB=fu==null?null:bill(fu);
+digits($('#m1'),f1(T).padStart(6,'0'),'kWh');
+digits($('#m2'),money(B.total));
+digits($('#m3'),FB?money(FB.total):'—');
+let bad=false;
+S.apps.forEach((a,i)=>{const r=document.querySelector('[data-i="'+i+'"]');if(!r)return;const v=ok(a);bad=bad||!v;
+r.querySelectorAll('input').forEach(inp=>{const k=inp.dataset.k;inp.classList.toggle('bad',k!=='name'&&!ok(a)&&((k==='w'&&!(a.w>0))||(k==='q'&&!(a.q>=1))||(k==='h'&&!(a.h>=0&&a.h<=24))))});
+const o=$('#k'+i);if(o)o.textContent=f1(kwh(a))+' kWh'});
+$('#e1').hidden=!bad;$('#e2').hidden=daysOk();$('#days').classList.toggle('bad',!daysOk());
+// usage
+const list=S.apps.map(a=>({name:a.name||'Unnamed',kwh:kwh(a)})).sort((x,y)=>y.kwh-x.kwh);const mx=list.length?list[0].kwh:0;
+$('#bars').innerHTML=list.map((a,i)=>`<div class="bar${i===0&&mx>0?' top':''}"><span>${esc(a.name)}</span><span class="track"><b style="width:${mx?a.kwh/mx*100:0}%"></b></span><span>${f1(a.kwh)}</span></div>`).join('')||'<p class="note">Add appliances to see usage.</p>';
+$('#topline').textContent=mx>0?`Highest use: ${list[0].name}, ${f1(list[0].kwh)} kWh (${Math.round(list[0].kwh/T*100)}% of ${f1(T)} kWh). Bars show kWh per appliance.`:'No usage yet.';
+const last=S.hist[S.hist.length-1];
+$('#cmp').innerHTML=last&&last.u>0&&T>0?(()=>{const d=T-last.u,p=d/last.u*100;return`This month ${f1(T)} kWh vs ${esc(last.m)} ${f1(+last.u)} kWh: <b class="${d>0?'up':'dn'}">${d>0?'up':'down'} ${Math.abs(p).toFixed(1)}%</b>.`})():'Save a month record to compare later months.';
+// forecast
+const f=forecast();$('#e3').hidden=!!f;
+const H=S.hist.map(h=>({m:h.m,u:+h.u||0}));if(fu!=null)H.push({m:'Next',u:fu,f:1});
+const hm=Math.max(1,...H.map(h=>h.u));
+$('#chart').innerHTML=H.map(h=>`<div class="col${h.f?' f':''}"><em>${Math.round(h.u)}</em><b style="height:${h.u/hm*115}px"></b><span>${esc(h.m)}</span></div>`).join('');
+$('#fline').innerHTML=f?`Forecast: <b>${f1(fu)} kWh</b> (moving average ${f1(f.avg)}, trend ${f1(f.tr)}). Estimated bill: <b>${money(FB.total)}</b>.`:'';
+const bt=(Bx,u)=>`<table><thead><tr><th>Slab</th><th>Units</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${Bx.rows.map((r,i)=>`<tr><td>${i+1}</td><td>${f1(r[0])}</td><td>${r[1]}</td><td>${money(r[2])}</td></tr>`).join('')}<tr><td colspan="3">Fixed charge</td><td>${money(Bx.fixed)}</td></tr><tr><td colspan="3">Tax and other (${+S.tax||0}%)</td><td>${money(Bx.tax)}</td></tr></tbody><tfoot><tr><td colspan="3">Total for ${f1(u)} kWh</td><td>${money(Bx.total)}</td></tr></tfoot></table>`;
+$('#bill').innerHTML=bt(B,T)+(FB?'<p class="note" style="margin-top:14px">Same tariff on the forecast units:</p>'+bt(FB,fu):'');
+// report
+const top=mx>0?list[0]:null;
+$('#rep').innerHTML=`<table><tbody><tr><td>Billing days</td><td>${S.days}</td></tr><tr><td>Total units</td><td>${f1(T)} kWh</td></tr><tr><td>Bill this month</td><td>${money(B.total)}</td></tr><tr><td>Highest-use appliance</td><td>${top?esc(top.name):'—'}</td></tr><tr><td>Forecast units, next month</td><td>${fu==null?'—':f1(fu)+' kWh'}</td></tr><tr><td>Forecast bill, next month</td><td>${FB?money(FB.total):'—'}</td></tr><tr><td>Estimated CO₂ this month</td><td>${(T*(+S.co2||0)).toFixed(0)} kg</td></tr></tbody></table>`;
+$('#tips').innerHTML=tips(top).map(x=>'<li>'+esc(x)+'</li>').join('');
+window._rep=['Electricity report',`Days: ${S.days}`,`Units: ${f1(T)} kWh`,`Bill: ${money(B.total)}`,`Top appliance: ${top?top.name:'-'}`,`Forecast: ${fu==null?'-':f1(fu)+' kWh, '+money(FB.total)}`,'',...list.map(a=>`${a.name}: ${f1(a.kwh)} kWh`)].join('\n');
+save()}
+
+function setNum(o,k,v){o[k]=k==='m'||k==='name'?v:parseFloat(v)}
+$('#apps').addEventListener('input',e=>{const r=e.target.closest('[data-i]');if(!r||!e.target.dataset.k)return;setNum(S.apps[+r.dataset.i],e.target.dataset.k,e.target.value);update()});
+$('#apps').addEventListener('click',e=>{const d=e.target.dataset.del;if(d==null)return;S.apps.splice(+d,1);renderApps();update()});
+$('#hist').addEventListener('input',e=>{const r=e.target.closest('[data-i]');if(!r||!e.target.dataset.k)return;setNum(S.hist[+r.dataset.i],e.target.dataset.k,e.target.value);update()});
+$('#hist').addEventListener('click',e=>{const d=e.target.dataset.del;if(d==null)return;S.hist.splice(+d,1);renderHist();update()});
+$('#slabs').addEventListener('input',e=>{const r=e.target.closest('[data-i]');if(!r||!e.target.dataset.k)return;S.slabs[+r.dataset.i][e.target.dataset.k]=parseFloat(e.target.value)||0;update()});
+$('#days').addEventListener('input',e=>{S.days=parseInt(e.target.value,10);update()});
+$('#fixed').addEventListener('input',e=>{S.fixed=parseFloat(e.target.value)||0;update()});
+$('#tax').addEventListener('input',e=>{S.tax=parseFloat(e.target.value)||0;update()});
+$('#co2').addEventListener('input',e=>{S.co2=parseFloat(e.target.value)||0;update()});
+$('#method').addEventListener('change',e=>{S.method=e.target.value;update()});
+$('#addBlank').onclick=()=>{S.apps.push({name:'',w:0,q:1,h:1});renderApps();update()};
+$('#addH').onclick=()=>{S.hist.push({m:'',u:0});renderHist();update()};
+$('#addS').onclick=()=>{S.slabs.splice(S.slabs.length-1,0,{size:100,rate:6});renderSlabs();update()};
+$('#rmS').onclick=()=>{if(S.slabs.length>1){S.slabs.pop();renderSlabs();update()}};
+$('#saveM').onclick=()=>{const m=$('#mname').value.trim()||'Month '+(S.hist.length+1);S.hist.push({m,u:Math.round(total()*10)/10});$('#mname').value='';renderHist();update()};
+$('#copy').onclick=async()=>{let t='Copied.';try{await navigator.clipboard.writeText(window._rep)}catch(e){t='Copy is blocked here. Select the summary text instead.'}$('#cmsg').textContent=t};
+$('#reset').onclick=()=>{S=JSON.parse(JSON.stringify(DEF));init()};
+$('#presets').innerHTML=PRE.map((p,i)=>`<button data-p="${i}">+ ${p[0]}</button>`).join('');
+$('#presets').addEventListener('click',e=>{const i=e.target.dataset.p;if(i==null)return;S.apps.push({name:PRE[i][0],w:PRE[i][1],q:1,h:1});renderApps();update()});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));['t1','t2','t3','t4'].forEach(id=>$('#'+id).hidden=id!==b.dataset.t)});
+function init(){$('#days').value=S.days;$('#fixed').value=S.fixed;$('#tax').value=S.tax;$('#co2').value=S.co2;$('#method').value=S.method;renderApps();renderHist();renderSlabs();update()}
+init();
+</script>
+</body>
+</html>
